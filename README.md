@@ -1,16 +1,20 @@
-# Barcode Scanner - Serial Number Checker
+# PC Refresh Lookup
 
-A mobile-friendly web application that scans barcodes and checks if the serial numbers exist in an uploaded Excel file.
+A mobile-friendly web application for scanning asset barcodes and verifying serial numbers during PC refresh operations. Styled with Entergy branding.
 
 ## Features
 
 - **Mobile-Optimized**: Responsive design works perfectly on smartphones and tablets
-- **Barcode Scanning**: Uses device camera to scan 1D and 2D barcodes
+- **Barcode Scanning**: Uses device camera to scan 1D and 2D barcodes (optimized for thin horizontal barcodes)
 - **Excel Support**: Upload .xlsx, .xls, or .csv files containing serial numbers
 - **Manual Entry**: Option to manually enter serial numbers
+- **Persistent Storage**: Two storage modes available:
+  - **LocalStorage Mode** (default): Saves serial numbers in browser, no server required
+  - **Backend Mode**: Upload once to server, available to all users
 - **Real-time Validation**: Instant feedback on whether a serial number exists
 - **Visual Feedback**: Clear success/error indicators with sound notifications
 - **Multiple Format Support**: Supports various barcode formats (QR Code, EAN, UPC, Code 128, etc.)
+- **Entergy Branding**: Clean corporate design matching Entergy.com styling
 
 ## How to Use
 
@@ -28,33 +32,89 @@ GHI901234
 
 The first row can be a header (it will be included in the scan).
 
-### 2. Access the Application
+### 2. Choose Your Deployment Mode
 
-Open `index.html` in a web browser, preferably on a mobile device with a camera.
+## Deployment Options
 
-**For local testing:**
+### Option A: LocalStorage Mode (Default - No Server Required)
+
+This mode saves serial numbers in the browser's localStorage. Perfect for single-user scenarios.
+
+**Pros:**
+- No server setup required
+- Works offline after initial load
+- Simple to deploy
+
+**Cons:**
+- Data only available on the device used to upload
+- Each user must upload their own Excel file
+
+**Setup:**
+1. Open `app.js` and ensure `CONFIG.USE_BACKEND = false`
+2. Deploy the files to any web server or run locally:
 ```bash
-# Using Python 3
+# Using Python
 python3 -m http.server 8000
 
-# Using Python 2
-python -m SimpleHTTPServer 8000
-
-# Using Node.js
+# Using Node.js http-server
 npx http-server
 ```
+3. Visit `http://localhost:8000` in your browser
 
-Then visit `http://localhost:8000` in your browser.
+### Option B: Backend Mode (Recommended for Teams)
 
-**For mobile access:**
-- Deploy to a web server (GitHub Pages, Netlify, Vercel, etc.)
-- Or use your computer's local IP address (e.g., `http://192.168.1.100:8000`)
+This mode uploads serial numbers to a Node.js server, making them available to all users.
+
+**Pros:**
+- Upload once, available to everyone
+- Centralized data management
+- Better for team environments
+
+**Cons:**
+- Requires Node.js server setup
+- Needs server hosting
+
+**Setup:**
+
+1. **Install Node.js dependencies:**
+```bash
+npm install
+```
+
+2. **Configure the frontend:**
+   - Open `app.js`
+   - Set `CONFIG.USE_BACKEND = true`
+   - Update `CONFIG.API_URL` if needed (default: `http://localhost:3000/api`)
+
+3. **Start the server:**
+```bash
+npm start
+```
+
+The server will start on `http://localhost:3000`
+
+4. **Production deployment:**
+   - Deploy to any Node.js hosting service (Heroku, AWS, DigitalOcean, etc.)
+   - Update `CONFIG.API_URL` in `app.js` to your production server URL
+   - Ensure CORS is configured for your domain
+
+**Server API Endpoints:**
+- `GET /api/serials` - Retrieve all serial numbers
+- `POST /api/upload` - Upload Excel file with serial numbers
+- `DELETE /api/serials` - Clear all serial numbers
+- `GET /api/status` - Check server status
+
+**For mobile access (both modes):**
+- Use HTTPS in production (required for camera access)
+- For local network testing, use your computer's IP address (e.g., `http://192.168.1.100:3000`)
 
 ### 3. Upload Serial Numbers
 
-1. Click "Choose Excel File"
+1. Click "CHOOSE EXCEL FILE"
 2. Select your Excel file
 3. Wait for confirmation that serial numbers are loaded
+4. Serial numbers are now saved (in browser or on server, depending on mode)
+5. Click "Clear Stored Data" if you need to upload a new list
 
 ### 4. Scan Barcodes
 

@@ -9,10 +9,12 @@ Thumbs.db
 *.swo
 *~
 
-# User uploaded files (optional - uncomment if you don't want to track uploads)
-# uploads/
-# *.xlsx
-# *.xls
+# Node.js
+node_modules/
+package-lock.json
+
+# User uploaded files
+uploads/
 
 # Logs
 *.log

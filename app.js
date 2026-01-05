@@ -1,3 +1,9 @@
+// Configuration
+const CONFIG = {
+    USE_BACKEND: false, // Set to true to use backend API, false for localStorage only
+    API_URL: 'http://localhost:3000/api' // Backend API URL
+};
+
 // Global variables
 let serialNumbers = [];
 let html5QrcodeScanner = null;
@@ -6,6 +12,7 @@ let isScanning = false;
 // DOM Elements
 const excelFileInput = document.getElementById('excelFile');
 const uploadStatus = document.getElementById('uploadStatus');
+const clearStorageBtn = document.getElementById('clearStorageBtn');
 const startScanBtn = document.getElementById('startScanBtn');
 const stopScanBtn = document.getElementById('stopScanBtn');
 const manualInput = document.getElementById('manualInput');
@@ -27,11 +34,187 @@ manualInput.addEventListener('keypress', (e) => {
     }
 });
 
+// Load serial numbers from localStorage or backend on page load
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+// Initialize app - load from backend or localStorage
+async function initializeApp() {
+    if (CONFIG.USE_BACKEND) {
+        await loadFromBackend();
+    } else {
+        loadFromLocalStorage();
+    }
+}
+
+// Backend API Functions
+async function loadFromBackend() {
+    try {
+        uploadStatus.className = 'status-message';
+        uploadStatus.innerHTML = '<span class="loading"></span> Loading from server...';
+
+        const response = await fetch(`${CONFIG.API_URL}/serials`);
+        const data = await response.json();
+
+        if (data.success && data.data.length > 0) {
+            serialNumbers = data.data;
+            const date = data.lastUpdated ? new Date(data.lastUpdated).toLocaleString() : 'Unknown';
+
+            uploadStatus.className = 'status-message success';
+            uploadStatus.innerHTML = `✓ Loaded ${serialNumbers.length} serial numbers from server<br><small>Last updated: ${date}</small>`;
+
+            // Show clear button
+            clearStorageBtn.style.display = 'inline-block';
+
+            // Enable scanning and manual entry
+            startScanBtn.disabled = false;
+            manualInput.disabled = false;
+            checkBtn.disabled = false;
+
+            // Display serial numbers
+            displaySerialNumbers();
+        } else {
+            uploadStatus.className = 'status-message';
+            uploadStatus.textContent = 'No serial numbers on server. Please upload a file.';
+        }
+    } catch (error) {
+        console.error('Error loading from backend:', error);
+        uploadStatus.className = 'status-message error';
+        uploadStatus.textContent = '✗ Could not connect to server. Please check if server is running.';
+    }
+}
+
+async function uploadToBackend(file) {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        uploadStatus.className = 'status-message';
+        uploadStatus.innerHTML = '<span class="loading"></span> Uploading to server...';
+
+        const response = await fetch(`${CONFIG.API_URL}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            uploadStatus.className = 'status-message success';
+            uploadStatus.textContent = data.message;
+
+            // Reload from server
+            await loadFromBackend();
+        } else {
+            throw new Error(data.error || 'Upload failed');
+        }
+    } catch (error) {
+        uploadStatus.className = 'status-message error';
+        uploadStatus.textContent = `✗ Error uploading to server: ${error.message}`;
+    }
+}
+
+async function clearBackendData() {
+    if (confirm('Are you sure you want to clear serial numbers from the server?')) {
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/serials`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                serialNumbers = [];
+                uploadStatus.className = 'status-message';
+                uploadStatus.textContent = 'Server data cleared. Please upload a new file.';
+                serialListCard.style.display = 'none';
+                clearStorageBtn.style.display = 'none';
+                startScanBtn.disabled = true;
+                manualInput.disabled = true;
+                checkBtn.disabled = true;
+            }
+        } catch (error) {
+            uploadStatus.className = 'status-message error';
+            uploadStatus.textContent = `✗ Error clearing server data: ${error.message}`;
+        }
+    }
+}
+
+// LocalStorage Functions
+function saveToLocalStorage(serials) {
+    try {
+        localStorage.setItem('pcRefreshSerials', JSON.stringify(serials));
+        localStorage.setItem('pcRefreshSerialsDate', new Date().toISOString());
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+    }
+}
+
+function loadFromLocalStorage() {
+    try {
+        const stored = localStorage.getItem('pcRefreshSerials');
+        const storedDate = localStorage.getItem('pcRefreshSerialsDate');
+
+        if (stored) {
+            serialNumbers = JSON.parse(stored);
+
+            if (serialNumbers.length > 0) {
+                const date = storedDate ? new Date(storedDate).toLocaleString() : 'Unknown';
+                uploadStatus.className = 'status-message success';
+                uploadStatus.innerHTML = `✓ Loaded ${serialNumbers.length} serial numbers from storage<br><small>Last updated: ${date}</small>`;
+
+                // Show clear button
+                clearStorageBtn.style.display = 'inline-block';
+
+                // Enable scanning and manual entry
+                startScanBtn.disabled = false;
+                manualInput.disabled = false;
+                checkBtn.disabled = false;
+
+                // Display serial numbers
+                displaySerialNumbers();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading from localStorage:', error);
+    }
+}
+
+// Wrapper function to clear data (localStorage or backend)
+function clearStoredData() {
+    if (CONFIG.USE_BACKEND) {
+        clearBackendData();
+    } else {
+        clearLocalStorage();
+    }
+}
+
+function clearLocalStorage() {
+    if (confirm('Are you sure you want to clear stored serial numbers?')) {
+        localStorage.removeItem('pcRefreshSerials');
+        localStorage.removeItem('pcRefreshSerialsDate');
+        serialNumbers = [];
+        uploadStatus.className = 'status-message';
+        uploadStatus.textContent = 'Storage cleared. Please upload a new file.';
+        serialListCard.style.display = 'none';
+        clearStorageBtn.style.display = 'none';
+        startScanBtn.disabled = true;
+        manualInput.disabled = true;
+        checkBtn.disabled = true;
+    }
+}
+
 // Handle Excel file upload
 function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    // If backend is enabled, upload to server
+    if (CONFIG.USE_BACKEND) {
+        uploadToBackend(file);
+        return;
+    }
+
+    // Otherwise, process locally
     uploadStatus.className = 'status-message';
     uploadStatus.innerHTML = '<span class="loading"></span> Reading file...';
 
@@ -73,6 +256,12 @@ function handleFileUpload(event) {
 
             uploadStatus.className = 'status-message success';
             uploadStatus.textContent = `✓ Successfully loaded ${serialNumbers.length} serial numbers!`;
+
+            // Save to localStorage
+            saveToLocalStorage(serialNumbers);
+
+            // Show clear button
+            clearStorageBtn.style.display = 'inline-block';
 
             // Enable scanning and manual entry
             startScanBtn.disabled = false;
