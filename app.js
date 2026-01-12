@@ -6,6 +6,7 @@ const CONFIG = {
 
 // Global variables
 let serialNumbers = [];
+let scanHistory = [];
 let html5QrcodeScanner = null;
 let isScanning = false;
 
@@ -22,6 +23,9 @@ const resultContent = document.getElementById('resultContent');
 const serialListCard = document.getElementById('serialListCard');
 const serialCount = document.getElementById('serialCount');
 const serialList = document.getElementById('serialList');
+const historyCard = document.getElementById('historyCard');
+const historyCount = document.getElementById('historyCount');
+const historyList = document.getElementById('historyList');
 
 // Event Listeners
 excelFileInput.addEventListener('change', handleFileUpload);
@@ -177,6 +181,116 @@ function loadFromLocalStorage() {
     } catch (error) {
         console.error('Error loading from localStorage:', error);
     }
+
+    // Load scan history
+    loadScanHistory();
+}
+
+// Scan History Functions
+function saveScanToHistory(serial, found) {
+    const scan = {
+        serial: serial,
+        found: found,
+        timestamp: new Date().toISOString()
+    };
+
+    scanHistory.unshift(scan); // Add to beginning of array
+
+    // Keep only last 100 scans
+    if (scanHistory.length > 100) {
+        scanHistory = scanHistory.slice(0, 100);
+    }
+
+    // Save to localStorage
+    try {
+        localStorage.setItem('pcRefreshScanHistory', JSON.stringify(scanHistory));
+    } catch (error) {
+        console.error('Error saving scan history:', error);
+    }
+
+    // Update display
+    displayScanHistory();
+}
+
+function loadScanHistory() {
+    try {
+        const stored = localStorage.getItem('pcRefreshScanHistory');
+        if (stored) {
+            scanHistory = JSON.parse(stored);
+            if (scanHistory.length > 0) {
+                displayScanHistory();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading scan history:', error);
+    }
+}
+
+function displayScanHistory() {
+    if (!scanHistory || scanHistory.length === 0) {
+        historyCard.style.display = 'none';
+        return;
+    }
+
+    const foundCount = scanHistory.filter(s => s.found).length;
+    const notFoundCount = scanHistory.filter(s => !s.found).length;
+
+    historyCount.innerHTML = `
+        <strong>Total Scans: ${scanHistory.length}</strong><br>
+        <span style="color: #28a745;">✓ Found: ${foundCount}</span> |
+        <span style="color: #dc3545;">✗ Not Found: ${notFoundCount}</span>
+    `;
+
+    historyList.innerHTML = scanHistory.map(scan => {
+        const date = new Date(scan.timestamp).toLocaleString();
+        const statusClass = scan.found ? 'history-item-found' : 'history-item-not-found';
+        const statusIcon = scan.found ? '✓' : '✗';
+        const statusText = scan.found ? 'Found' : 'Not Found';
+
+        return `
+            <div class="history-item ${statusClass}">
+                <div class="history-serial">${scan.serial}</div>
+                <div class="history-status">${statusIcon} ${statusText}</div>
+                <div class="history-date">${date}</div>
+            </div>
+        `;
+    }).join('');
+
+    historyCard.style.display = 'block';
+}
+
+function clearScanHistory() {
+    if (confirm('Are you sure you want to clear scan history?')) {
+        scanHistory = [];
+        localStorage.removeItem('pcRefreshScanHistory');
+        historyCard.style.display = 'none';
+    }
+}
+
+function exportScanHistory() {
+    if (scanHistory.length === 0) {
+        alert('No scan history to export.');
+        return;
+    }
+
+    // Create CSV content
+    let csv = 'Serial Number,Status,Date/Time\n';
+    scanHistory.forEach(scan => {
+        const status = scan.found ? 'Found' : 'Not Found';
+        const date = new Date(scan.timestamp).toLocaleString();
+        csv += `"${scan.serial}","${status}","${date}"\n`;
+    });
+
+    // Create download link
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scan-history-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
 }
 
 // Wrapper function to clear data (localStorage or backend)
@@ -387,6 +501,9 @@ function checkSerialNumber(scannedSerial) {
             serial.toLowerCase() === normalizedScanned.toLowerCase()
         );
     }
+
+    // Save to scan history
+    saveScanToHistory(normalizedScanned, found);
 
     displayResult(normalizedScanned, found);
 }

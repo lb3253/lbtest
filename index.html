@@ -59,6 +59,17 @@
             <div class="serial-count" id="serialCount"></div>
             <div class="serial-list" id="serialList"></div>
         </div>
+
+        <!-- Scan History -->
+        <div id="historyCard" class="card" style="display: none;">
+            <h2>Scan History</h2>
+            <div class="history-count" id="historyCount"></div>
+            <div class="history-actions">
+                <button onclick="exportScanHistory()" class="btn-history">Export CSV</button>
+                <button onclick="clearScanHistory()" class="btn-history btn-history-clear">Clear History</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
+        </div>
     </div>
 
     <script src="app.js"></script>
