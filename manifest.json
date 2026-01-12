@@ -1,0 +1,26 @@
+{
+  "name": "PC Refresh Lookup",
+  "short_name": "PC Refresh",
+  "description": "Asset serial number verification tool with barcode scanning for PC refresh operations",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f1f1f1",
+  "theme_color": "#ff1a57",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": []
+}

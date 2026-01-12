@@ -15,6 +15,22 @@ A mobile-friendly web application for scanning asset barcodes and verifying seri
 - **Visual Feedback**: Clear success/error indicators with sound notifications
 - **Multiple Format Support**: Supports various barcode formats (QR Code, EAN, UPC, Code 128, etc.)
 - **Entergy Branding**: Clean corporate design matching Entergy.com styling
+- **Progressive Web App**: Install as home screen app on iOS and Android with custom icon
+- **Scan History**: Track all scans with timestamps, export to CSV
+
+## App Icon Setup
+
+The app supports custom icons for iOS and Android home screens. To set up your custom icon:
+
+1. **Read the Icon Guide**: See `ICON-GUIDE.md` for detailed instructions
+2. **Create Your Icons**: Design featuring PC, magnifying glass, and recycle symbol
+3. **Required Files**:
+   - `favicon-16x16.png` & `favicon-32x32.png` - Browser icons
+   - `apple-touch-icon.png` (180x180) - iOS home screen
+   - `icon-192x192.png` & `icon-512x512.png` - Android icons
+4. **Temporary Placeholder**: Use `icon-placeholder.svg` while designing your custom icon
+
+See `ICON-GUIDE.md` for design tools, specifications, and step-by-step instructions.
 
 ## How to Use
 
