@@ -9,9 +9,7 @@ let serialNumbers = [];
 let scanHistory = [];
 let html5QrcodeScanner = null;
 let isScanning = false;
-let scannedBarcodes = new Set(); // Collect all barcodes from a label
-let scanTimeout = null; // Timeout to finalize scanning if no match found
-const SCAN_COLLECT_DURATION = 8000; // 8 seconds to collect all barcodes before giving up
+let lastScannedBarcode = null; // Prevent duplicate reads of the same barcode
 
 // DOM Elements
 const excelFileInput = document.getElementById('excelFile');
@@ -422,12 +420,42 @@ function displaySerialNumbers() {
     serialListCard.style.display = 'block';
 }
 
+// Determine if a scanned barcode looks like a serial number (not a date, asset ID, or model name)
+function looksLikeSerialNumber(barcode) {
+    const value = barcode.trim();
+
+    // Skip empty values
+    if (!value) return false;
+
+    // Filter out dates: matches patterns like MM/DD/YYYY, YYYY-MM-DD, DD-MM-YYYY, etc.
+    if (/^\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4}$/.test(value)) return false;
+
+    // Filter out known asset ID prefixes (Entergy asset tags)
+    if (/^ELD\d+$/i.test(value)) return false;
+
+    // Filter out product/element IDs containing manufacturer names
+    const manufacturers = ['lenovo', 'dell', 'hp', 'hewlett', 'cisco', 'microsoft', 'surface', 'apple', 'asus', 'acer', 'toshiba', 'panasonic'];
+    const lowerValue = value.toLowerCase();
+    for (const mfg of manufacturers) {
+        if (lowerValue.includes(mfg)) return false;
+    }
+
+    // Filter out values that look like model numbers with dashes and product descriptors
+    // e.g., "LenovoM720Tiny-L1", "OptiPlex-7080-SFF"
+    if (/^[A-Za-z]+\d+[A-Za-z]+-[A-Za-z0-9]+$/i.test(value)) return false;
+
+    // Filter out pure numeric strings that are too long (likely not serials) or too short
+    if (/^\d+$/.test(value) && (value.length > 12 || value.length < 4)) return false;
+
+    // Passes all filters — likely a serial number
+    return true;
+}
+
 // Start barcode scanning
 function startScanning() {
     if (isScanning) return;
 
-    // Reset collection for a fresh scan session
-    resetScanCollection();
+    lastScannedBarcode = null;
 
     const config = {
         fps: 10,
@@ -457,8 +485,6 @@ function startScanning() {
 function stopScanning() {
     if (!isScanning || !html5QrcodeScanner) return;
 
-    clearTimeout(scanTimeout);
-
     html5QrcodeScanner.stop().then(() => {
         isScanning = false;
         startScanBtn.style.display = 'inline-block';
@@ -468,115 +494,24 @@ function stopScanning() {
     });
 }
 
-// Handle successful scan - collect multiple barcodes and find the serial
+// Handle successful scan - filter out non-serial barcodes, instantly check serial candidates
 function onScanSuccess(decodedText, decodedResult) {
     const barcode = String(decodedText).trim();
 
-    // Skip if we've already seen this barcode
-    if (scannedBarcodes.has(barcode.toLowerCase())) return;
+    // Skip if we just scanned this same barcode (avoid rapid duplicate reads)
+    if (lastScannedBarcode === barcode.toLowerCase()) return;
+    lastScannedBarcode = barcode.toLowerCase();
 
-    // Add to collected set
-    scannedBarcodes.add(barcode.toLowerCase());
+    // Filter: skip barcodes that are obviously not serial numbers
+    if (!looksLikeSerialNumber(barcode)) {
+        // Silently ignore dates, asset IDs, model names, etc.
+        return;
+    }
 
-    // Play a short beep for feedback
+    // This barcode looks like a serial number — stop scanning and check it
+    stopScanning();
     playBeep();
-
-    // Check if this barcode matches a serial number in the list
-    const isMatch = serialNumbers.some(serial =>
-        serial.toLowerCase() === barcode.toLowerCase()
-    );
-
-    // Update the live scan indicator
-    updateScanIndicator(barcode, isMatch);
-
-    if (isMatch) {
-        // Found the serial number! Stop scanning and show result.
-        clearTimeout(scanTimeout);
-        stopScanning();
-        checkSerialNumber(barcode);
-        resetScanCollection();
-    } else {
-        // Not a match yet - keep scanning, reset the timeout
-        clearTimeout(scanTimeout);
-        scanTimeout = setTimeout(() => {
-            // Time's up - no match found among all scanned barcodes
-            stopScanning();
-            showNoMatchResults();
-            resetScanCollection();
-        }, SCAN_COLLECT_DURATION);
-    }
-}
-
-// Show live indicator of barcodes being collected
-function updateScanIndicator(latestBarcode, isMatch) {
-    let indicator = document.getElementById('scanIndicator');
-    if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.id = 'scanIndicator';
-        indicator.className = 'scan-indicator';
-        const readerEl = document.getElementById('reader');
-        readerEl.parentNode.insertBefore(indicator, readerEl.nextSibling);
-    }
-
-    indicator.style.display = 'block';
-    indicator.innerHTML = `
-        <div class="scan-indicator-header">
-            <span class="loading"></span> Scanning label... (${scannedBarcodes.size} barcode${scannedBarcodes.size !== 1 ? 's' : ''} detected)
-        </div>
-        <div class="scan-indicator-list">
-            ${Array.from(scannedBarcodes).map(bc => {
-                const matched = serialNumbers.some(s => s.toLowerCase() === bc.toLowerCase());
-                return `<div class="scan-indicator-item ${matched ? 'scan-match' : 'scan-no-match'}">
-                    ${matched ? '&#10003;' : '&#10007;'} ${bc}
-                    ${matched ? '<span class="scan-match-label">SERIAL MATCH</span>' : ''}
-                </div>`;
-            }).join('')}
-        </div>
-        <div class="scan-indicator-hint">Point camera at all barcodes on the label. Auto-stops when serial is found.</div>
-    `;
-}
-
-// Show results when no barcode matched any serial number
-function showNoMatchResults() {
-    const barcodes = Array.from(scannedBarcodes);
-
-    resultsCard.style.display = 'block';
-    resultContent.innerHTML = `
-        <div class="result-error">
-            <div class="result-icon">&#10007;</div>
-            <div class="result-text" style="color: #dc3545;">No Serial Number Match Found</div>
-            <div class="result-detail">Scanned ${barcodes.length} barcode${barcodes.length !== 1 ? 's' : ''} from the label:</div>
-            <div class="scanned-barcodes-list">
-                ${barcodes.map(bc => `
-                    <div class="scanned-barcode-item" onclick="manualCheckFromScan('${bc}')">
-                        ${bc} <span class="tap-to-check">tap to check</span>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    // Save all scanned barcodes to history as not found
-    barcodes.forEach(bc => saveScanToHistory(bc, false));
-
-    resultsCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-    // Hide scan indicator
-    const indicator = document.getElementById('scanIndicator');
-    if (indicator) indicator.style.display = 'none';
-}
-
-// Allow user to manually check a specific barcode from the scan results
-function manualCheckFromScan(barcode) {
     checkSerialNumber(barcode);
-}
-
-// Reset scan collection for next scan session
-function resetScanCollection() {
-    scannedBarcodes = new Set();
-    clearTimeout(scanTimeout);
-    const indicator = document.getElementById('scanIndicator');
-    if (indicator) indicator.style.display = 'none';
 }
 
 // Handle scan error (can be ignored as it fires frequently while searching for codes)
@@ -623,7 +558,7 @@ function displayResult(serial, found) {
         resultContent.innerHTML = `
             <div class="result-success">
                 <div class="result-icon">✓</div>
-                <div class="result-text" style="color: #28a745;">Serial Number Found!</div>
+                <div class="result-text" style="color: #28a745;">On the Refresh List</div>
                 <div class="result-serial">${serial}</div>
             </div>
         `;
@@ -631,7 +566,7 @@ function displayResult(serial, found) {
         resultContent.innerHTML = `
             <div class="result-error">
                 <div class="result-icon">✗</div>
-                <div class="result-text" style="color: #dc3545;">Serial Number Not Found</div>
+                <div class="result-text" style="color: #dc3545;">Not on the Refresh List</div>
                 <div class="result-serial">${serial}</div>
             </div>
         `;
