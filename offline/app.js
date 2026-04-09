@@ -107,28 +107,27 @@ function findSerialColumn(record) {
     return keys[0];
 }
 
-// Load CSV data from the same folder
-async function loadCSVData() {
+// Load CSV data from data.js (works on file:// and http://)
+function loadCSVData() {
     uploadStatus.className = 'status-message';
-    uploadStatus.innerHTML = '<span class="loading"></span> Loading data from CSV...';
+    uploadStatus.innerHTML = '<span class="loading"></span> Loading data...';
 
     try {
-        const response = await fetch('data.csv');
-        if (!response.ok) {
-            throw new Error('Could not find data.csv. Make sure the file is in the same folder as this page.');
+        // DATA_CSV is defined in data.js, loaded via <script> tag
+        if (typeof DATA_CSV === 'undefined' || !DATA_CSV) {
+            throw new Error('No data found. Make sure data.js is in the same folder and contains your CSV data.');
         }
 
-        const text = await response.text();
-        assetRecords = parseCSV(text);
+        assetRecords = parseCSV(DATA_CSV);
 
         if (assetRecords.length === 0) {
             uploadStatus.className = 'status-message error';
-            uploadStatus.textContent = 'No records found in data.csv. Please check the file format.';
+            uploadStatus.textContent = 'No records found in data.js. Please check the file format.';
             return;
         }
 
         uploadStatus.className = 'status-message success';
-        uploadStatus.textContent = `\u2713 Loaded ${assetRecords.length} records from data.csv`;
+        uploadStatus.textContent = `\u2713 Loaded ${assetRecords.length} records`;
 
         // Enable scanning and manual entry
         startScanBtn.disabled = false;
@@ -141,7 +140,7 @@ async function loadCSVData() {
     } catch (error) {
         uploadStatus.className = 'status-message error';
         uploadStatus.textContent = `\u2717 ${error.message}`;
-        console.error('Error loading CSV:', error);
+        console.error('Error loading data:', error);
     }
 }
 
