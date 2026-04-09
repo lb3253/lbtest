@@ -1,0 +1,21 @@
+Serial Number,Last Contact,Under Warranty,Refresh Year,Recommended Action,Location,Vulnerabilities
+ABC123456,2025-12-15,Yes,2026,Keep,Building A - Floor 2,None
+XYZ789012,2024-06-20,No,2025,Replace,Building B - Floor 1,CVE-2024-1234
+DEF345678,2025-11-01,Yes,2027,Keep,Building A - Floor 3,None
+GHI901234,2023-03-10,No,2024,Replace,Building C - Floor 1,"CVE-2023-5678, CVE-2024-9012"
+JKL567890,2025-09-22,Yes,2026,Evaluate,Building B - Floor 2,None
+MNO112233,2024-01-15,No,2025,Replace,Building A - Floor 1,CVE-2024-3456
+PQR445566,2025-10-30,Yes,2027,Keep,Building D - Floor 4,None
+STU778899,2024-08-05,No,2024,Replace,Building C - Floor 3,"CVE-2023-7890, CVE-2024-2345"
+VWX334455,2025-07-18,Yes,2026,Keep,Building B - Floor 3,None
+YZA667788,2025-04-12,Yes,2027,Keep,Building A - Floor 4,None
+BCD990011,2023-11-28,No,2024,Replace,Building D - Floor 1,CVE-2024-6789
+EFG223344,2025-06-09,Yes,2026,Evaluate,Building C - Floor 2,None
+HIJ556677,2024-09-14,No,2025,Replace,Building B - Floor 4,"CVE-2024-1111, CVE-2024-2222"
+KLM889900,2025-08-25,Yes,2027,Keep,Building A - Floor 1,None
+NOP112244,2025-01-30,Yes,2026,Keep,Building D - Floor 2,None
+QRS335577,2024-04-17,No,2025,Replace,Building C - Floor 4,CVE-2024-4444
+TUV668800,2025-11-20,Yes,2027,Keep,Building B - Floor 1,None
+WXY991133,2023-07-22,No,2024,Replace,Building A - Floor 2,"CVE-2023-3333, CVE-2024-5555"
+ZAB224466,2025-05-14,Yes,2026,Evaluate,Building D - Floor 3,None
+CDE557799,2025-03-08,Yes,2027,Keep,Building C - Floor 1,None
