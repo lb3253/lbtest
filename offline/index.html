@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PC Refresh Lookup</title>
+
+    <!-- Theme Color for Browser UI -->
+    <meta name="theme-color" content="#ff1a57">
+
+    <!-- Description -->
+    <meta name="description" content="PC Refresh asset serial number verification tool with barcode scanning">
+
+    <link rel="stylesheet" href="styles.css">
+    <!-- html5-qrcode library for barcode scanning -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PC Refresh Lookup</h1>
+            <p class="subtitle">Asset Serial Number Verification</p>
+        </header>
+
+        <!-- Data Status Section -->
+        <div class="card">
+            <h2>Data Status</h2>
+            <div class="upload-section">
+                <div id="uploadStatus" class="status-message">Loading data...</div>
+                <button id="reloadDataBtn" class="btn-clear" onclick="loadCSVData()">Reload Data</button>
+            </div>
+        </div>
+
+        <!-- Barcode Scanner Section -->
+        <div class="card">
+            <h2>1. Scan Barcode</h2>
+            <div class="scanner-controls">
+                <button id="startScanBtn" class="btn btn-primary" disabled>Start Scanner</button>
+                <button id="stopScanBtn" class="btn btn-secondary" style="display: none;">Stop Scanner</button>
+            </div>
+            <div id="reader" class="scanner-container"></div>
+        </div>
+
+        <!-- Manual Entry Option -->
+        <div class="card">
+            <h2>2. Or Enter Manually</h2>
+            <div class="manual-entry">
+                <input type="text" id="manualInput" placeholder="Enter serial number" disabled />
+                <button id="checkBtn" class="btn btn-primary" disabled>Check</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsCard" class="card results-card" style="display: none;">
+            <h2>Result</h2>
+            <div id="resultContent"></div>
+        </div>
+
+        <!-- Serial Numbers List -->
+        <div id="serialListCard" class="card" style="display: none;">
+            <h2>Loaded Serial Numbers</h2>
+            <div class="serial-count" id="serialCount"></div>
+            <div class="serial-list" id="serialList"></div>
+        </div>
+
+        <!-- Scan History -->
+        <div id="historyCard" class="card" style="display: none;">
+            <h2>Scan History</h2>
+            <div class="history-count" id="historyCount"></div>
+            <div class="history-actions">
+                <button onclick="exportScanHistory()" class="btn-history">Export CSV</button>
+                <button onclick="clearScanHistory()" class="btn-history btn-history-clear">Clear History</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
