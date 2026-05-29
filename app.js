@@ -9,6 +9,7 @@ let serialNumbers = [];
 let scanHistory = [];
 let html5QrcodeScanner = null;
 let isScanning = false;
+let lastScannedBarcode = null; // Prevent duplicate reads of the same barcode
 
 // DOM Elements
 const excelFileInput = document.getElementById('excelFile');
@@ -419,9 +420,42 @@ function displaySerialNumbers() {
     serialListCard.style.display = 'block';
 }
 
+// Determine if a scanned barcode looks like a serial number (not a date, asset ID, or model name)
+function looksLikeSerialNumber(barcode) {
+    const value = barcode.trim();
+
+    // Skip empty values
+    if (!value) return false;
+
+    // Filter out dates: matches patterns like MM/DD/YYYY, YYYY-MM-DD, DD-MM-YYYY, etc.
+    if (/^\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4}$/.test(value)) return false;
+
+    // Filter out known asset ID prefixes (Entergy asset tags)
+    if (/^ELD\d+$/i.test(value)) return false;
+
+    // Filter out product/element IDs containing manufacturer names
+    const manufacturers = ['lenovo', 'dell', 'hp', 'hewlett', 'cisco', 'microsoft', 'surface', 'apple', 'asus', 'acer', 'toshiba', 'panasonic'];
+    const lowerValue = value.toLowerCase();
+    for (const mfg of manufacturers) {
+        if (lowerValue.includes(mfg)) return false;
+    }
+
+    // Filter out values that look like model numbers with dashes and product descriptors
+    // e.g., "LenovoM720Tiny-L1", "OptiPlex-7080-SFF"
+    if (/^[A-Za-z]+\d+[A-Za-z]+-[A-Za-z0-9]+$/i.test(value)) return false;
+
+    // Filter out pure numeric strings that are too long (likely not serials) or too short
+    if (/^\d+$/.test(value) && (value.length > 12 || value.length < 4)) return false;
+
+    // Passes all filters — likely a serial number
+    return true;
+}
+
 // Start barcode scanning
 function startScanning() {
     if (isScanning) return;
+
+    lastScannedBarcode = null;
 
     const config = {
         fps: 10,
@@ -460,16 +494,24 @@ function stopScanning() {
     });
 }
 
-// Handle successful scan
+// Handle successful scan - filter out non-serial barcodes, instantly check serial candidates
 function onScanSuccess(decodedText, decodedResult) {
-    // Stop scanning temporarily to avoid multiple scans
+    const barcode = String(decodedText).trim();
+
+    // Skip if we just scanned this same barcode (avoid rapid duplicate reads)
+    if (lastScannedBarcode === barcode.toLowerCase()) return;
+    lastScannedBarcode = barcode.toLowerCase();
+
+    // Filter: skip barcodes that are obviously not serial numbers
+    if (!looksLikeSerialNumber(barcode)) {
+        // Silently ignore dates, asset IDs, model names, etc.
+        return;
+    }
+
+    // This barcode looks like a serial number — stop scanning and check it
     stopScanning();
-
-    // Check the scanned serial number
-    checkSerialNumber(decodedText);
-
-    // Play a beep sound (optional)
     playBeep();
+    checkSerialNumber(barcode);
 }
 
 // Handle scan error (can be ignored as it fires frequently while searching for codes)
@@ -516,7 +558,7 @@ function displayResult(serial, found) {
         resultContent.innerHTML = `
             <div class="result-success">
                 <div class="result-icon">✓</div>
-                <div class="result-text" style="color: #28a745;">Serial Number Found!</div>
+                <div class="result-text" style="color: #28a745;">On the Refresh List</div>
                 <div class="result-serial">${serial}</div>
             </div>
         `;
@@ -524,7 +566,7 @@ function displayResult(serial, found) {
         resultContent.innerHTML = `
             <div class="result-error">
                 <div class="result-icon">✗</div>
-                <div class="result-text" style="color: #dc3545;">Serial Number Not Found</div>
+                <div class="result-text" style="color: #dc3545;">Not on the Refresh List</div>
                 <div class="result-serial">${serial}</div>
             </div>
         `;
